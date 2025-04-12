@@ -1,0 +1,539 @@
+/* Apple-inspired clean, minimal design */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    line-height: 1.5;
+    color: #1d1d1f;
+    background-color: #f5f5f7;
+    padding: 0;
+    height: 100vh; /* Make body full viewport height */
+    overflow: hidden; /* Prevent body scrolling */
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    height: 100%; /* Make container full height */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Prevent container scrolling */
+}
+
+/* Typography */
+h1 {
+    font-size: 48px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    margin-bottom: 10px;
+    color: #1d1d1f;
+}
+
+h2 {
+    font-size: 24px;
+    font-weight: 500;
+    margin-bottom: 15px;
+    color: #1d1d1f;
+}
+
+p {
+    color: #86868b;
+    font-size: 18px;
+    margin-bottom: 40px;
+}
+
+/* Layout structure */
+.intro {
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+.main-content {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 20px;
+    flex: 1; /* Make main content take available space */
+    min-height: 0; /* Allow content to shrink if needed */
+    overflow: hidden; /* Prevent main content scrolling */
+}
+
+.left-section {
+    flex: 1;
+    min-width: 0;
+}
+
+.right-section {
+    flex: 2;
+    min-width: 0;
+}
+
+/* Input area */
+.input-area {
+    background-color: #fff;
+    border-radius: 18px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+/* Note input area - change to single row layout */
+.note-inputs {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.note-input {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.note-input label {
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #86868b;
+    font-weight: 500;
+}
+
+.note-select {
+    padding: 12px 10px;
+    border: 1px solid #d2d2d7;
+    border-radius: 12px;
+    font-size: 14px;
+    background-color: white;
+    appearance: none;
+    -webkit-appearance: none;
+    color: #1d1d1f;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%2386868B' stroke-width='2'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.note-select:focus {
+    outline: none;
+    border-color: #0071e3;
+    box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1);
+}
+
+#identify-btn {
+    display: block;
+    width: 100%;
+    margin: 0 auto;
+    padding: 14px 0;
+    background-color: #0071e3;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+#identify-btn:hover {
+    background-color: #0077ed;
+}
+
+#identify-btn:active {
+    transform: scale(0.98);
+}
+
+/* Result area */
+.result-area {
+    background-color: #fff;
+    border-radius: 18px;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    position: relative;
+    margin-bottom: 30px;
+}
+
+.result-area.hidden {
+    display: none;
+}
+
+#chord-result {
+    position: relative;  /* Add position relative */
+}
+
+#chord-result h2 {
+    margin-bottom: 20px;
+    color: #1d1d1f;
+}
+
+.result-detail {
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+}
+
+.result-detail .label {
+    min-width: 120px;
+    font-size: 14px;
+    color: #86868b;
+    font-weight: 500;
+}
+
+.result-detail .value {
+    color: #1d1d1f;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* Validation message styling */
+#chord-result.validation-message {
+    border-top: 3px solid #ff3b30;
+    border-radius: 0 0 18px 18px;
+}
+
+/* Discovery section */
+.discovery-log {
+    background-color: #fff;
+    border-radius: 18px;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Prevent discovery log scrolling */
+    position: relative; /* Add position context */
+    z-index: 1; /* Base z-index */
+}
+
+.discovery-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.discovery-header h2 {
+    margin-bottom: 0;
+}
+
+.progress-counter {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+    color: #1d1d1f;
+    font-weight: 500;
+    z-index: 10;
+    text-shadow: 0 0 3px rgba(255, 255, 255, 0.7);
+}
+
+/* Move reset button styles to new container at bottom */
+.reset-btn-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    flex-shrink: 0; /* Don't allow this to shrink */
+}
+
+.reset-btn {
+    padding: 10px 24px;
+    background-color: #f5f5f7;
+    color: #1d1d1f;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.reset-btn:hover {
+    background-color: #e8e8ed;
+}
+
+.progress-bar {
+    height: 24px;
+    background-color: #f5f5f7;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    position: relative;
+    overflow: visible;
+    z-index: 10; /* Higher z-index for progress bar */
+}
+
+#progress-fill {
+    height: 100%;
+    background-color: #0071e3;
+    width: 0%;
+    transition: width 0.5s ease;
+    border-radius: 12px;
+}
+
+/* Chord grid */
+.chord-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(11, auto); /* Define 11 rows explicitly */
+    grid-auto-flow: row;
+    gap: 15px;
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 5px;
+    padding-bottom: 10px;
+    position: relative;
+    z-index: 5; /* Higher z-index for the grid */
+    padding-top: 5px; /* Add some padding to top */
+}
+
+/* Special handling for the 43rd item */
+.chord-grid > *:nth-child(43) {
+    grid-column: span 1; /* Ensure the last item takes only one column */
+}
+
+/* Add dummy elements for even spacing */
+.chord-grid::after {
+    content: "";
+    grid-column: span 3; /* Fill the remaining space in the last row */
+}
+
+.chord-card {
+    padding: 16px;
+    background-color: #f5f5f7;
+    border-radius: 12px;
+    position: relative;
+    z-index: 5; /* Base z-index for cards */
+    height: 100px; /* Fixed height for consistent card size */
+    perspective: 1000px; /* 3D effect for flipping */
+    cursor: pointer;
+}
+
+.chord-card:hover {
+    z-index: 50; /* Much higher z-index when hovering */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Add shadow for hovering */
+}
+
+/* Card flip container */
+.card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+}
+
+.chord-card.flipped .card-inner {
+    transform: rotateY(180deg);
+}
+
+/* Position the front and back sides */
+.card-front, .card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden; /* Safari */
+    backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Style the front side */
+.card-front {
+    align-items: center;
+}
+
+/* Style the back side */
+.card-back {
+    transform: rotateY(180deg);
+    text-align: left;
+    overflow: hidden;
+}
+
+.chord-card .chord-name {
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 8px;
+}
+
+.chord-card .chord-intervals,
+.chord-card .chord-notes {
+    color: #86868b;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.chord-card.undiscovered {
+    background-color: #f5f5f7;
+    color: #86868b;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+}
+
+/* New discovery styling */
+.chord-card.discovered {
+    background-color: #fff;
+    border: 1px solid #d2d2d7;
+}
+
+/* Add shine animation keyframes */
+@keyframes shine {
+    0% {
+        box-shadow: 0 0 5px rgba(255, 186, 8, 0.4);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(255, 186, 8, 0.8), 0 0 30px rgba(255, 222, 104, 0.6);
+        transform: scale(1.1);
+    }
+    100% {
+        box-shadow: 0 0 5px rgba(255, 186, 8, 0.4);
+        transform: scale(1);
+    }
+}
+
+.new-discovery-badge {
+    position: absolute;
+    top: -24px;
+    right: -40px;
+    background: linear-gradient(45deg, #ffdc68, #ffba08);
+    color: #78350f;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 12px;
+    box-shadow: 0 2px 8px rgba(255, 186, 8, 0.4);
+    z-index: 1000;
+    border: 2px solid #fff;
+    animation: shine 1.5s ease-in-out 1; /* Add animation that runs once */
+}
+
+#chord-result.new-discovery {
+    border-top: 3px solid #ffba08;
+}
+
+.chord-card.new-discovery {
+    border: 1px solid #ffba08;
+    box-shadow: 0 0 0 3px rgba(255, 186, 8, 0.15);
+    position: relative;
+    z-index: 10;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+    body {
+        height: auto;
+        overflow: auto;
+    }
+    
+    .container {
+        height: auto;
+    }
+    
+    .main-content {
+        flex-direction: column;
+        overflow: visible;
+    }
+    
+    .left-section, 
+    .right-section {
+        width: 100%;
+        overflow: visible;
+    }
+    
+    .discovery-log {
+        height: auto;
+        overflow: visible;
+    }
+    
+    .chord-grid {
+        grid-template-columns: repeat(2, 1fr);
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    h1 {
+        font-size: 36px;
+    }
+}
+
+/* Completion badge and celebration */
+.completion-badge {
+    background: linear-gradient(45deg, #ffdc68, #ffba08);
+    color: #78350f;
+    padding: 10px 18px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(255, 186, 8, 0.4);
+    margin-left: 15px;
+    border: 2px solid #fff;
+    animation: pulse 2s infinite;
+}
+
+.progress-bar.celebration {
+    animation: celebrate 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(255, 186, 8, 0.4);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 0 20px rgba(255, 186, 8, 0.8), 0 0 30px rgba(255, 222, 104, 0.6);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(255, 186, 8, 0.4);
+    }
+}
+
+@keyframes celebrate {
+    0% {
+        box-shadow: 0 0 5px rgba(255, 186, 8, 0.4);
+    }
+    25% {
+        box-shadow: 0 0 15px rgba(255, 186, 8, 0.6), 0 0 20px rgba(255, 222, 104, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(255, 186, 8, 0.8), 0 0 30px rgba(255, 222, 104, 0.6);
+    }
+    75% {
+        box-shadow: 0 0 15px rgba(255, 186, 8, 0.6), 0 0 20px rgba(255, 222, 104, 0.4);
+    }
+    100% {
+        box-shadow: 0 0 5px rgba(255, 186, 8, 0.4);
+    }
+}
+
+/* Hidden developer feature */
+.dev-feature {
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+}
+
+.dev-feature:hover {
+    color: #0071e3;
+}
+
+.dev-feature:active {
+    color: #0077ed;
+} 
