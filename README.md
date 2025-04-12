@@ -2,6 +2,8 @@
 
 A web-based application that allows musicians to explore and discover the 43 fundamental four-note chord types in music theory.
 
+*Created by Tian Xing, who discovered the mathematical foundation of these 43 fundamental chord types and wanted to share this knowledge with the world.*
+
 ## Features
 
 - Input any 4 music notes to identify the chord type
