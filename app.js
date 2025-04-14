@@ -216,7 +216,7 @@ async function loadChordMappings() {
                 chordMappings[key] = {
                     name: name.trim(),
                     rootPosition: notes,
-                    type: name.trim()
+                    type: name.trim().replace(/^([A-G][#b]?)(\s+)/, '') // Only the type, e.g., 'Cluster'
                 };
                 continue;
             }
@@ -848,8 +848,25 @@ function displayResult(notes, chordType, standardName, chordIndex, rootNote, map
     // Show only the type for chordType (remove root note if present)
     let justType = chordType;
     if (typeof chordType === 'string') {
-        // Remove root note (e.g., 'C Maj7' -> 'Maj7')
-        justType = chordType.replace(/^([A-G][#b]?\s*)/, '').trim();
+        // Remove root note if present (e.g., 'CCluster' or 'C Cluster' -> 'Cluster')
+        if (/^[A-G][#b]?/.test(chordType)) {
+            // First try with space
+            let match = chordType.match(/^([A-G][#b]?)\s+(.*)$/);
+            if (match) {
+                justType = match[2].trim();
+            } else {
+                // Try without space (e.g., 'CCluster')
+                match = chordType.match(/^([A-G][#b]?)(.*)$/);
+                justType = match ? match[2].trim() : chordType;
+            }
+        } else {
+            justType = chordType; // Already just the type
+        }
+        
+        // Fix specific case where 'Cluster' is incorrectly extracted as 'luster'
+        if (justType === 'luster') {
+            justType = 'Cluster';
+        }
     }
     domElements.resultType.textContent = justType;
     // Change label to 'Chord Name' instead of 'Standard Name'
@@ -1067,10 +1084,28 @@ function updateDiscoveredChordsGrid(discovered) {
             
             const chordName = document.createElement('div');
             chordName.className = 'chord-name';
-            // Show only the type (remove root note)
-            let justType = chord.name;
-            if (typeof chord.name === 'string') {
-                justType = chord.name.replace(/^([A-G][#b]?\s*)/, '').trim();
+            // Show only the chord type (not affected by the root note)
+            let justType = chord.type || chord.chordType;
+            if (!justType && typeof chord.name === 'string') {
+                // Remove root note if present (e.g., 'CCluster' or 'C Cluster' -> 'Cluster')
+                if (/^[A-G][#b]?/.test(chord.name)) {
+                    // First try with space
+                    let match = chord.name.match(/^([A-G][#b]?)\s+(.*)$/);
+                    if (match) {
+                        justType = match[2].trim();
+                    } else {
+                        // Try without space (e.g., 'CCluster')
+                        match = chord.name.match(/^([A-G][#b]?)(.*)$/);
+                        justType = match ? match[2].trim() : chord.name;
+                    }
+                } else {
+                    justType = chord.name; // Already just the type
+                }
+                
+                // Fix specific case where 'Cluster' is incorrectly extracted as 'luster'
+                if (justType === 'luster') {
+                    justType = 'Cluster';
+                }
             }
             chordName.textContent = justType;
             cardFront.appendChild(chordName);
