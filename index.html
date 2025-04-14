@@ -95,16 +95,16 @@
                         <div id="discovery-badge" class="new-discovery-badge hidden">✨ New Discovery!</div>
                         
                         <div class="result-detail">
+                            <span class="label">Chord Name:</span>
+                            <span id="result-name" class="value"></span>
+                        </div>
+                        <div class="result-detail">
                             <span class="label">Root Position:</span>
                             <span id="result-notes" class="value"></span>
                         </div>
                         <div class="result-detail">
                             <span class="label">Chord Type:</span>
                             <span id="result-type" class="value"></span>
-                        </div>
-                        <div class="result-detail">
-                            <span class="label">Standard Name:</span>
-                            <span id="result-name" class="value"></span>
                         </div>
                     </div>
                 </div>
@@ -129,7 +129,12 @@
         </div>
     </div>
     
-    <script src="chordData.js"></script>
-    <script src="app.js"></script>
+    <!-- Add the discovery badge element that was missing -->
+    <div id="discovery-badge" class="discovery-badge">New Discovery!</div>
+    
+    <!-- Load JavaScript files with defer attribute to ensure proper loading order -->
+    <script src="chordData.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="test_discovery.js" defer></script>
 </body>
 </html> 

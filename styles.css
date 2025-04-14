@@ -11,9 +11,167 @@ body {
     color: #1d1d1f;
     background-color: #f5f5f7;
     padding: 0;
-    height: 100vh; /* Make body full viewport height */
-    overflow: hidden; /* Prevent body scrolling */
+    height: 100vh;
+    overflow: hidden;
+    transition: background 0.5s cubic-bezier(.4,2,.6,1);
 }
+
+/* Animate .chord-card entrance */
+.chord-card {
+    /* Only animate new discovery, not all cards */
+    opacity: 1;
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: box-shadow 0.3s, transform 0.2s;
+}
+.chord-card.new-discovery {
+    animation: pop-in 0.5s cubic-bezier(.4,2,.6,1);
+    border: 2px solid #ffba08;
+    box-shadow: 0 0 0 6px rgba(255, 186, 8, 0.15);
+    opacity: 1 !important;
+}
+@keyframes pop-in {
+    0% { transform: scale(0.7); opacity: 0; }
+    80% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Ensure discovered chord cards always show content */
+.chord-card.discovered {
+    background-color: #fff;
+    border: 1px solid #d2d2d7;
+    opacity: 1;
+    color: #1d1d1f;
+}
+.chord-card.undiscovered {
+    background-color: #f5f5f7;
+    color: #86868b;
+    opacity: 1;
+}
+@keyframes card-fade-in {
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+.chord-card:hover {
+    z-index: 50;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    transform: scale(1.04) rotate(-1deg);
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+.chord-card:active {
+    transform: scale(0.97) rotate(0deg);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.chord-card.new-discovery {
+    border: 2px solid #ffba08;
+    box-shadow: 0 0 0 6px rgba(255, 186, 8, 0.15);
+    animation: pop-in 0.5s cubic-bezier(.4,2,.6,1);
+}
+@keyframes pop-in {
+    0% { transform: scale(0.7); opacity: 0; }
+    80% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); }
+}
+
+/* Discovery badge animation */
+.discovery-badge {
+    box-shadow: 0 4px 24px rgba(255, 186, 8, 0.25);
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+    user-select: none !important;
+    position: relative;
+    overflow: hidden;
+    cursor: default !important;
+}
+.discovery-badge *, .discovery-badge::after, .discovery-badge::before {
+    user-select: none !important;
+    cursor: default !important;
+}
+#discovery-badge, #discovery-badge *, #discovery-badge::after, #discovery-badge::before {
+    user-select: none !important;
+    cursor: default !important;
+}
+.discovery-badge:hover::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -60%; width: 60%; height: 100%;
+    background: linear-gradient(120deg, rgba(255,255,255,0.0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.0) 100%);
+    animation: badge-shine 0.9s linear 1;
+    pointer-events: none;
+}
+@keyframes badge-shine {
+    0% { left: -60%; }
+    100% { left: 110%; }
+}
+.discovery-badge.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    animation: badge-pulse 1.2s cubic-bezier(.4,2,.6,1);
+}
+@keyframes badge-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 186, 8, 0.3); }
+    60% { box-shadow: 0 0 0 18px rgba(255, 186, 8, 0); }
+    100% { box-shadow: 0 4px 24px rgba(255, 186, 8, 0.25); }
+}
+
+/* Progress bar smooth fill */
+#progress-fill {
+    transition: width 0.8s cubic-bezier(.4,2,.6,1), background 0.3s;
+}
+
+/* Result area fade/slide */
+.result-area {
+    transition: box-shadow 0.3s, background 0.3s, transform 0.4s cubic-bezier(.4,2,.6,1), opacity 0.4s cubic-bezier(.4,2,.6,1);
+}
+.result-area.hidden {
+    opacity: 0;
+    transform: translateY(40px) scale(0.97);
+    pointer-events: none;
+}
+
+/* Button and dropdown transitions */
+#identify-btn {
+    transition: background-color 0.25s, transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(0, 113, 227, 0.08);
+}
+#identify-btn:hover {
+    background-color: #0077ed;
+    box-shadow: 0 8px 24px rgba(0,113,227,0.15);
+    transform: scale(1.03);
+}
+#identify-btn:active {
+    background-color: #005bb5;
+    transform: scale(0.97);
+    box-shadow: 0 1px 2px rgba(0,113,227,0.07);
+}
+
+.note-select {
+    transition: border-color 0.25s, box-shadow 0.25s, background 0.25s, color 0.2s;
+}
+.note-select:hover {
+    border-color: #0071e3;
+    background: #f0f8ff;
+}
+.note-select:active {
+    background: #e6f0fa;
+    color: #0071e3;
+}
+
+/* Completion badge celebration */
+.completion-badge {
+    box-shadow: 0 4px 24px rgba(255, 186, 8, 0.25);
+    animation: confetti-pop 1.5s cubic-bezier(.4,2,.6,1);
+}
+@keyframes confetti-pop {
+    0% { transform: scale(0.7) rotate(-8deg); opacity: 0; }
+    60% { transform: scale(1.1) rotate(4deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
 
 .container {
     max-width: 1200px;
@@ -278,6 +436,28 @@ p {
     border-radius: 12px;
 }
 
+/* Discovery badge */
+.discovery-badge {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #ffba08;
+    color: #1d1d1f;
+    font-weight: bold;
+    padding: 10px 15px;
+    border-radius: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 1000;
+}
+
+.discovery-badge.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 /* Chord grid */
 .chord-grid {
     display: grid;
@@ -432,6 +612,28 @@ p {
 
 .hidden {
     display: none !important;
+}
+
+/* Piano chord player styles */
+.playing-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 9999;
+    animation: fadeInOut 1.5s ease-in-out;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(10px); }
+    10% { opacity: 1; transform: translateY(0); }
+    90% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-10px); }
 }
 
 /* Responsive adjustments */

@@ -12,10 +12,125 @@ const domElements = {
     resultName: null,
     progressFill: null,
     progressText: null,
-    discoveredChordsContainer: null,
+    discoveredChordsContainer: null, // will be set in initialize
     discoveryBadge: null,
     resetBtn: null
 };
+
+// Audio context for playing chord sounds
+let audioContext = null;
+
+// Initialize the audio context (must be done after user interaction)
+function initAudioContext() {
+    if (audioContext === null) {
+        try {
+            window.AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioContext = new AudioContext();
+            console.log('Audio context initialized');
+        } catch (e) {
+            console.error('Web Audio API not supported in this browser:', e);
+        }
+    }
+    
+    // If context is suspended (browser policy), resume it
+    if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+}
+
+// Convert note name to frequency
+function noteToFrequency(note) {
+    const noteMap = {
+        'C': 261.63, 'C#': 277.18, 'Db': 277.18, 'D': 293.66, 'D#': 311.13, 
+        'Eb': 311.13, 'E': 329.63, 'F': 349.23, 'F#': 369.99, 'Gb': 369.99, 
+        'G': 392.00, 'G#': 415.30, 'Ab': 415.30, 'A': 440.00, 'A#': 466.16, 
+        'Bb': 466.16, 'B': 493.88
+    };
+    
+    return noteMap[note] || 440; // Default to A4 if note not found
+}
+
+// Play a piano-like note with proper envelope
+function playNote(note, startTime, duration) {
+    if (!audioContext) return;
+    
+    const osc = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    const panNode = audioContext.createStereoPanner();
+    
+    // Create a more complex, softer tone using multiple oscillators
+    osc.type = 'sine'; // Sine wave as the base for a softer sound
+    osc.frequency.value = noteToFrequency(note);
+    
+    // Very slight random detune for more natural sound without harshness
+    osc.detune.value = Math.random() * 2 - 1;
+    
+    // Create subtle stereo panning based on note frequency
+    // Higher notes slightly right, lower notes slightly left
+    const normalizedFreq = (osc.frequency.value - 261.63) / (493.88 - 261.63); // Normalize between C4 and B4
+    panNode.pan.value = (normalizedFreq - 0.5) * 0.4; // Scale to subtle panning (-0.2 to 0.2)
+    
+    // Envelope for a softer, gentler piano-like sound
+    // Softer attack
+    gainNode.gain.setValueAtTime(0, startTime);
+    gainNode.gain.linearRampToValueAtTime(0.4, startTime + 0.03); // Lower peak, slower attack
+    
+    // Gentler decay and sustain
+    gainNode.gain.linearRampToValueAtTime(0.35, startTime + 0.08);
+    gainNode.gain.exponentialRampToValueAtTime(0.25, startTime + 0.3);
+    
+    // Longer, smoother release for a more gentle fade
+    gainNode.gain.setValueAtTime(0.25, startTime + duration - 0.2);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration + 0.1);
+    
+    // Connect nodes: oscillator -> gain -> pan -> destination
+    osc.connect(gainNode);
+    gainNode.connect(panNode);
+    panNode.connect(audioContext.destination);
+    
+    // Start and stop the oscillator
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.1); // Add a little extra time for release
+    
+    // Clean up
+    setTimeout(() => {
+        osc.disconnect();
+        gainNode.disconnect();
+        panNode.disconnect();
+    }, (startTime + duration + 0.1 - audioContext.currentTime) * 1000);
+}
+
+// Play a chord with slight arpeggiation for a more musical feel
+function playChord(notes) {
+    if (!audioContext) initAudioContext();
+    if (!audioContext) return; // Exit if audio context failed to initialize
+    
+    const now = audioContext.currentTime;
+    const noteDuration = 1.5; // Note duration in seconds
+    const arpeggiationSpeed = 0.02; // Time between notes for subtle arpeggiation
+    
+
+    // Add a low-pass filter for a mellower sound
+    const filter = audioContext.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 2200; // Cut higher frequencies for less harshness
+    filter.Q.value = 0.5; // Gentle slope
+    filter.connect(audioContext.destination);
+    
+    // Play each note with slight delay for a pleasing arpeggiation effect
+    notes.forEach((note, index) => {
+        // Slightly longer duration for bass notes to create a warmer sound
+        const noteDur = noteDuration - (index * 0.05); // Bass notes last longer
+        playNote(note, now + (index * arpeggiationSpeed), noteDur);
+    });
+    
+    // Disconnect filter after chord finishes
+    setTimeout(() => {
+        filter.disconnect();
+    }, noteDuration * 1000 + 300);
+    
+
+}
 
 // Track newly discovered chords
 let newlyDiscoveredChords = [];
@@ -82,9 +197,29 @@ async function loadChordMappings() {
         // Clear existing mappings
         chordMappings = {};
         
+        let inOriginalFormatSection = false;
         for (const line of lines) {
             const trimmedLine = line.trim();
             if (!trimmedLine) continue;
+            
+            // Detect the start of the ORIGINAL FORMAT section
+            if (trimmedLine.startsWith('# ORIGINAL FORMAT')) {
+                inOriginalFormatSection = true;
+                continue;
+            }
+            // If we're in the original format section, parse lines like 'C Cluster: C, C#, D, D#'
+            if (inOriginalFormatSection && /^([A-G][#b]? .+?):\s*([A-G][#b]?(,\s*[A-G][#b]?)+)$/.test(trimmedLine)) {
+                // e.g. 'C Cluster: C, C#, D, D#'
+                const [full, name, notesStr] = trimmedLine.match(/^([^:]+):\s*(.+)$/);
+                const notes = notesStr.split(',').map(n => n.trim());
+                const key = [...notes].sort().join(',');
+                chordMappings[key] = {
+                    name: name.trim(),
+                    rootPosition: notes,
+                    type: name.trim()
+                };
+                continue;
+            }
             
             if (trimmedLine.startsWith('Combination')) {
                 // Start of a new combination
@@ -402,6 +537,7 @@ function arraysEqual(a, b) {
 function identifyChord() {
     try {
         console.log("Identify chord function called");
+        console.log("chordTypes defined:", typeof chordTypes !== 'undefined', "length:", chordTypes ? chordTypes.length : 0);
         
         // Get the selected notes
         const note1 = document.getElementById('note1').value;
@@ -446,34 +582,166 @@ function identifyChord() {
             console.log("Found chord:", chordInfo);
             
             // Find the chord index in our chordTypes array
-            const chordType = chordInfo.type;
+            // CRITICAL FIX: Extract just the chord type without the root note
+            let chordType = chordInfo.type;
+            
+            // If the chord type starts with a note name (e.g., 'C Maj7'), extract just the type part
+            if (/^[A-G][#b]?\s/.test(chordType)) {
+                chordType = chordType.replace(/^[A-G][#b]?\s+/, '');
+                console.log("Extracted chord type without root note:", chordType);
+            }
+            
             console.log("Looking for chord type:", chordType);
             
-            // Also try normalized matching if exact match fails
-            let chordIndex = chordTypes.findIndex(chord => chord.name === chordType);
+            // Store the original chord type for discovery purposes
+            const originalChordType = chordType;
             
-            // If not found, try case-insensitive matching and handle "Ma" vs "Maj" differences
+            // --- Robust normalization for chord type matching ---
+            function normalizeChordName(name) {
+                return name.toLowerCase()
+                    .replace(/–/g, '-') // handle en dash
+                    .replace(/maj/g, 'ma')
+                    .replace(/min/g, 'mi')
+                    .replace(/m(?=\d)/g, 'mi') // m7, m9, etc. to mi7, mi9
+                    .replace(/m(?=aj)/g, 'ma') // maj, maj7, etc.
+                    .replace(/m(?=in)/g, 'mi') // min, min7, etc.
+                    .replace(/add\*/g, 'add')
+                    .replace(/omit\*/g, 'omit')
+                    .replace(/sus\*/g, 'sus')
+                    .replace(/\s+/g, '')
+                    .replace(/\*/g, '')
+                    .replace(/#/g, 'sharp')
+                    .replace(/b/g, 'flat')
+                    .replace(/–/g, '-')
+                    .replace(/_/g, '')
+                    .replace(/\./g, '')
+                    .replace(/\(/g, '').replace(/\)/g, '');
+            }
+
+            let chordIndex = chordTypes.findIndex(chord => chord.name === chordType);
+            console.log("Initial chord lookup result:", { chordType, foundIndex: chordIndex });
+
             if (chordIndex === -1) {
-                console.log("Exact match not found, trying flexible matching");
+                // Try robust normalization
+                const normalizedType = normalizeChordName(chordType);
+                chordIndex = chordTypes.findIndex(chord => {
+                    const normalizedChordName = normalizeChordName(chord.name);
+                    return normalizedChordName === normalizedType;
+                });
+                if (chordIndex !== -1) {
+                    console.log(`Found match using normalization: ${chordTypes[chordIndex].name}`, chordIndex);
+                } else {
+                    // Comprehensive list of all 43 chord types from 43.txt
+                    // Each chord must be matched exactly to be considered discovered
+                    const allChordTypes = [
+                        '-7', '-7#5', '-7add*b2-omit5', '-7b5',
+                        '7', '7#5', '7#5sus2', '7add*b2-omit5', '7b5', '7b5sus*b2',
+                        '7sus*b2', '7sus2', '7sus4',
+                        'Cluster',
+                        'dimMaj7', 'dimMaj7sus2',
+                        'Maj7b5sus*b2', 'Maj7', 'Maj7#5', 'Maj7#5add6-omit3', 'Maj7#5sus*b2',
+                        'Maj7#5sus2', 'Maj7#5sus4', 'Maj7add*#2-omit5', 'Maj7add#11-omit3',
+                        'Maj7add2-omit5', 'Maj7add6-omit3', 'Maj7add6-omit5', 'Maj7b5',
+                        'Maj7b5-omit3', 'Maj7b5sus4', 'Maj7sus*b2', 'Maj7sus*b2&4-omit5',
+                        'Maj7sus*b2-omit5', 'Maj7sus*b2add6-omit5', 'Maj7sus2', 'Maj7sus2&4',
+                        'Maj7sus4', 'minMaj7', 'minMaj7#5', 'minMaj7add4-omit5',
+                        'minMaj7sus*b2-omit5', 'o7'
+                    ];
+                    
+                    // Create a map of normalized chord names to original chord names
+                    const normalizedToOriginal = {};
+                    allChordTypes.forEach(type => {
+                        normalizedToOriginal[normalizeChordName(type)] = type;
+                    });
+
+                    // Find exact match by normalized name
+                    const normalizedSearchType = normalizeChordName(chordType);
+                    
+                    // First check if the normalized name is in our map
+                    if (normalizedToOriginal[normalizedSearchType]) {
+                        const exactType = normalizedToOriginal[normalizedSearchType];
+                        chordIndex = chordTypes.findIndex(chord => chord.name === exactType);
+                        if (chordIndex !== -1) {
+                            console.log(`Found exact match using normalized lookup: ${chordTypes[chordIndex].name}`, chordIndex);
+                        }
+                    }
+
+                    // If still not found, try with specific patterns
+                    if (chordIndex === -1) {
+                        // Special case patterns for complex chord types
+                        const specialPatterns = [
+                            [/maj7add\*#2-omit5/i, 'Maj7add*#2-omit5'],
+                            [/-7add\*b2-omit5/i, '-7add*b2-omit5'],
+                            [/7add\*b2-omit5/i, '7add*b2-omit5'],
+                            [/maj7#5add6-omit3/i, 'Maj7#5add6-omit3'],
+                            [/maj7add#11-omit3/i, 'Maj7add#11-omit3'],
+                            [/maj7add2-omit5/i, 'Maj7add2-omit5'],
+                            [/maj7add6-omit3/i, 'Maj7add6-omit3'],
+                            [/maj7add6-omit5/i, 'Maj7add6-omit5'],
+                            [/maj7b5-omit3/i, 'Maj7b5-omit3'],
+                            [/maj7sus\*b2&4-omit5/i, 'Maj7sus*b2&4-omit5'],
+                            [/maj7sus\*b2-omit5/i, 'Maj7sus*b2-omit5'],
+                            [/maj7sus\*b2add6-omit5/i, 'Maj7sus*b2add6-omit5'],
+                            [/maj7sus2&4/i, 'Maj7sus2&4'],
+                            [/minmaj7add4-omit5/i, 'minMaj7add4-omit5'],
+                            [/minmaj7sus\*b2-omit5/i, 'minMaj7sus*b2-omit5']
+                        ];
+
+                        for (const [pattern, exactName] of specialPatterns) {
+                            if (pattern.test(chordType)) {
+                                chordIndex = chordTypes.findIndex(chord => chord.name === exactName);
+                                if (chordIndex !== -1) {
+                                    console.log(`Found match using special pattern: ${chordTypes[chordIndex].name}`, chordIndex);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // If still not found, log the failure for debugging
+                    if (chordIndex === -1) {
+                        console.warn("Could not find chord type (exact only):", chordType, "Normalized:", normalizedSearchType, "Available chord types:", chordTypes.map(c => c.name));
+                    }
+                }
+            }
+            
+            // If not found, try case-insensitive matching but ONLY for EXACT matches
+            if (chordIndex === -1) {
+                console.log("Exact match not found, trying case-insensitive exact matching");
                 
-                // Normalize the chord type for more flexible matching
+                // Normalize the chord type for more flexible matching but maintain full structure
                 const normalizeChordName = (name) => {
                     return name.toLowerCase()
                         .replace(/\s+/g, '')    // Remove spaces
-                        .replace(/\*/g, '')     // Remove asterisks
                         .replace(/maj/g, 'ma')  // Normalize Maj/Ma variants
                         .replace(/min/g, 'mi'); // Normalize Min/Mi variants
                 };
                 
                 const normalizedType = normalizeChordName(chordType);
                 
+                // ONLY do exact matches - no substring matching!
                 chordIndex = chordTypes.findIndex(chord => {
                     const normalizedChordName = normalizeChordName(chord.name);
                     return normalizedChordName === normalizedType;
                 });
                 
                 if (chordIndex !== -1) {
-                    console.log(`Found match using normalization: ${chordTypes[chordIndex].name}`);
+                    console.log(`Found match using case-insensitive exact match: ${chordTypes[chordIndex].name}`, chordIndex);
+                } else {
+                    console.log("Failed to find exact chord match - checking if this is a known chord type");
+                    
+                    // Get the chord type from the mapping
+                    const mappedType = chordInfo.type;
+                    console.log(`Mapped chord type from chord_mapping.txt: ${mappedType}`);
+                    
+                    // Find the EXACT chord type in chordTypes
+                    chordIndex = chordTypes.findIndex(chord => chord.name === mappedType);
+                    
+                    if (chordIndex !== -1) {
+                        console.log(`Found exact match using mapped type: ${chordTypes[chordIndex].name}`, chordIndex);
+                    } else {
+                        console.log("All exact chord matching methods failed");
+                    }
                 }
             }
             
@@ -484,13 +752,43 @@ function identifyChord() {
             const mappedRootPosition = chordInfo.rootPosition;
                     
                     // Display the result
+                    console.log("Displaying result with chordIndex:", chordIndex);
+                    
+                    // CRITICAL FIX: Force a valid chord index for discovery
+                    // If we couldn't find the chord in chordTypes but have a valid type from mapping,
+                    // find the index by direct name comparison
+                    if (chordIndex === -1 && chordInfo.type) {
+                        console.log("Chord index not found, searching by direct type name:", chordInfo.type);
+                        
+                        // Try to find the chord type by exact name match
+                        for (let i = 0; i < chordTypes.length; i++) {
+                            if (chordTypes[i].name === chordInfo.type) {
+                                chordIndex = i;
+                                console.log("Found chord index by direct name match:", chordIndex);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Use the exact chord type from chordTypes for discovery to ensure proper matching
+                    const exactChordType = chordIndex >= 0 ? chordTypes[chordIndex].name : chordInfo.type;
+                    console.log("Using exact chord type for discovery:", exactChordType);
+                    
+                    // CRITICAL FIX: Force log the chord index and type for debugging
+                    console.log("FINAL CHORD DATA FOR DISCOVERY:", {
+                        index: chordIndex,
+                        type: exactChordType,
+                        originalType: chordInfo.type,
+                        name: chordInfo.name
+                    });
+                    
                     displayResult(
                         selectedNotes,
-                chordInfo.type,
-                chordInfo.name,
-                chordIndex >= 0 ? chordIndex : -1,
-                rootNoteName,
-                mappedRootPosition
+                        exactChordType, // Use the exact chord type from chordTypes
+                        chordInfo.name,
+                        chordIndex, // Pass the chord index directly, even if -1
+                        rootNoteName,
+                        mappedRootPosition
             );
         } else {
             // Chord not found in our mappings
@@ -547,7 +845,17 @@ function displayResult(notes, chordType, standardName, chordIndex, rootNote, map
     } else {
         domElements.resultNotes.textContent = rootPositionNotes.join(', ');
     }
-    domElements.resultType.textContent = chordType;
+    // Show only the type for chordType (remove root note if present)
+    let justType = chordType;
+    if (typeof chordType === 'string') {
+        // Remove root note (e.g., 'C Maj7' -> 'Maj7')
+        justType = chordType.replace(/^([A-G][#b]?\s*)/, '').trim();
+    }
+    domElements.resultType.textContent = justType;
+    // Change label to 'Chord Name' instead of 'Standard Name'
+    if (domElements.resultName && domElements.resultName.previousElementSibling) {
+        domElements.resultName.previousElementSibling.textContent = 'Chord Name:';
+    }
     domElements.resultName.textContent = standardName;
     
     // Remove any special styling
@@ -559,11 +867,19 @@ function displayResult(notes, chordType, standardName, chordIndex, rootNote, map
     
     // If this is a valid chord (not unknown), save it to discovered chords
     if (chordIndex >= 0) {
+        console.log('[Discovery] About to save chord with index:', chordIndex);
+        
+        // Get previously discovered chords
         const previouslyDiscovered = getDiscoveredChords();
+        
+        // Save the newly discovered chord - use the index directly as in the old version
         const discovered = saveDiscoveredChord(chordIndex);
+        console.log('[Discovery] Discovered chords after save:', discovered);
         
         // Check if this is a newly discovered chord
         if (!previouslyDiscovered.includes(chordIndex)) {
+            console.log('[Discovery] This is a newly discovered chord');
+            
             // Remove the animation from the last discovered chord
             if (lastDiscoveredChord !== null) {
                 const lastChordCard = document.querySelector(`.chord-card[data-index="${lastDiscoveredChord}"]`);
@@ -571,6 +887,7 @@ function displayResult(notes, chordType, standardName, chordIndex, rootNote, map
                     lastChordCard.classList.remove('new-discovery');
                 }
             }
+            
             // Update the newly discovered chord
             newlyDiscoveredChords = [chordIndex];
             lastDiscoveredChord = chordIndex;
@@ -580,14 +897,32 @@ function displayResult(notes, chordType, standardName, chordIndex, rootNote, map
             showNewDiscoveryBadge();
         }
         
+        // Update the discovery progress - simple and direct as in the old version
         updateDiscoveryProgress(discovered);
     }
+}
+
+/**
+ * Initialize the discovery DOM elements
+ */
+function initializeDiscoveryDOMElements() {
+    // Get references to the DOM elements needed for discovery
+    domElements.discoveredChordsContainer = document.getElementById('discovered-chords');
+    domElements.progressFill = document.getElementById('progress-fill');
+    domElements.progressText = document.getElementById('progress-text');
+    
+    console.log('[DEBUG] Re-initialized discovery DOM elements:', {
+        container: domElements.discoveredChordsContainer,
+        progressFill: domElements.progressFill,
+        progressText: domElements.progressText
+    });
 }
 
 /**
  * Update the discovery progress UI
  */
 function updateDiscoveryProgress(discovered) {
+    console.log('[Discovery] updateDiscoveryProgress called with:', discovered);
     const total = chordTypes.length;
     const count = discovered.length;
     
@@ -651,25 +986,60 @@ function updateDiscoveryProgress(discovered) {
  * Update the discovered chords grid
  */
 function updateDiscoveredChordsGrid(discovered) {
+    console.log('[Discovery] updateDiscoveredChordsGrid called with:', discovered);
+    
+    // Check if DOM elements are properly initialized
+    console.log('[DEBUG] DOM elements check:', {
+        container: domElements.discoveredChordsContainer,
+        progressFill: domElements.progressFill,
+        progressText: domElements.progressText
+    });
+    
+    // Check if discovered is an array with valid values
+    if (!Array.isArray(discovered)) {
+        console.error('[DEBUG] discovered is not an array:', discovered);
+        discovered = [];
+    }
+    
+    console.log('[DEBUG] discovered array:', discovered);
+    
     if (!domElements.discoveredChordsContainer) {
         console.error("Discovered chords container not found");
         return;
     }
     
+    // Clear the container
     domElements.discoveredChordsContainer.innerHTML = '';
+    console.log('[DEBUG] Cleared container, about to add chord cards');
     
     // Now that chordTypes is ordered correctly, we can use it directly
     // Count how many cards are created
     let validChordCount = 0;
     
-    // Create chord cards in the exact order they appear in chordTypes
-    for (let i = 0; i < chordTypes.length; i++) {
+    // Sort chordTypes by name alphabetically (case-insensitive, ignoring root note)
+    const sortedChordTypes = chordTypes
+        .map((chord, idx) => ({ ...chord, _originalIndex: idx }))
+        .sort((a, b) => {
+            // Remove root note for sorting
+            const nameA = (typeof a.name === 'string' ? a.name.replace(/^([A-G][#b]?\s*)/, '').trim().toLowerCase() : '').toLowerCase();
+            const nameB = (typeof b.name === 'string' ? b.name.replace(/^([A-G][#b]?\s*)/, '').trim().toLowerCase() : '').toLowerCase();
+            if (nameA < nameB) return -1;
+            if (nameA > nameB) return 1;
+            return 0;
+        });
+
+    for (let i = 0; i < sortedChordTypes.length; i++) {
         if (validChordCount >= 43) break; // Stop once we have 43 cards
         
         validChordCount++;
-        const chord = chordTypes[i];
-        const isDiscovered = discovered.includes(i);
-        const isNewlyDiscovered = newlyDiscoveredChords.includes(i);
+        const chord = sortedChordTypes[i];
+        const originalIndex = chord._originalIndex;
+        
+        // Force convert index to number for comparison
+        const isDiscovered = discovered.includes(originalIndex) || discovered.includes(String(originalIndex));
+        const isNewlyDiscovered = newlyDiscoveredChords.includes(originalIndex) || newlyDiscoveredChords.includes(String(originalIndex));
+        
+        console.log(`[DEBUG] Creating card for chord ${originalIndex}: ${chord.name}, discovered: ${isDiscovered}`);
         
         const chordCard = document.createElement('div');
         let className = 'chord-card';
@@ -684,7 +1054,7 @@ function updateDiscoveredChordsGrid(discovered) {
         }
         
         chordCard.className = className;
-        chordCard.setAttribute('data-index', i);
+        chordCard.setAttribute('data-index', originalIndex);
         
         if (isDiscovered) {
             // Create the inner container for the flip effect
@@ -697,7 +1067,12 @@ function updateDiscoveredChordsGrid(discovered) {
             
             const chordName = document.createElement('div');
             chordName.className = 'chord-name';
-            chordName.textContent = chord.name;
+            // Show only the type (remove root note)
+            let justType = chord.name;
+            if (typeof chord.name === 'string') {
+                justType = chord.name.replace(/^([A-G][#b]?\s*)/, '').trim();
+            }
+            chordName.textContent = justType;
             cardFront.appendChild(chordName);
             
             // Create back side (detailed info)
@@ -722,9 +1097,20 @@ function updateDiscoveredChordsGrid(discovered) {
             // Add the inner container to the card
             chordCard.appendChild(cardInner);
             
-            // Add click event to flip the card
+            // Add click event to flip the card and play audio
             chordCard.addEventListener('click', function() {
+                // Toggle flipped state
+                const wasFlipped = this.classList.contains('flipped');
                 this.classList.toggle('flipped');
+                
+                // Play the chord when flipping to back (not when flipping back to front)
+                if (!wasFlipped) {
+                    // Play after a tiny delay to coincide with the flip animation
+                    setTimeout(() => {
+                        // Play the chord's root position example (C + chord type)
+                        playChord(chord.rootPositionExample);
+                    }, 200);
+                }
             });
         } else {
             chordCard.textContent = '???';
@@ -747,6 +1133,18 @@ function updateDiscoveredChordsGrid(discovered) {
     }
     
     console.log(`Updated chord grid with ${discovered.length} discovered chords`);
+
+    // --- SCROLL TO NEWLY DISCOVERED CHORD ---
+    // Only scroll if there is a new discovery
+    if (newlyDiscoveredChords && newlyDiscoveredChords.length > 0) {
+        const container = domElements.discoveredChordsContainer;
+        if (container) {
+            const newCard = container.querySelector('.chord-card.new-discovery');
+            if (newCard) {
+                newCard.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+            }
+        }
+    }
 }
 
 /**
@@ -765,7 +1163,16 @@ function initialize() {
     
     // First load the chord mappings
     loadChordMappings().then(() => {
-        // Then initialize the rest of the app
+        console.log("Chord mappings loaded, initializing rest of app");
+        
+        // Initialize storage to ensure it exists
+        initializeStorage();
+        
+        // Force localStorage to be properly initialized
+        if (!localStorage.getItem('discoveredChords')) {
+            localStorage.setItem('discoveredChords', JSON.stringify([]));
+            console.log("Set empty discoveredChords array");
+        }
         
         // Migrate any existing discovered chord data to the new ordering
         migrateChordData();
@@ -781,6 +1188,40 @@ function initialize() {
     domElements.discoveredChordsContainer = document.getElementById('discovered-chords');
     domElements.discoveryBadge = document.getElementById('discovery-badge');
     domElements.resetBtn = document.getElementById('reset-discoveries');
+    
+    // Debug DOM elements
+    console.log('[DEBUG] DOM elements initialized:', {
+        identifyBtn: !!domElements.identifyBtn,
+        chordResult: !!domElements.chordResult,
+        resultNotes: !!domElements.resultNotes,
+        resultType: !!domElements.resultType,
+        resultName: !!domElements.resultName,
+        progressFill: !!domElements.progressFill,
+        progressText: !!domElements.progressText,
+        discoveredChordsContainer: !!domElements.discoveredChordsContainer,
+        discoveryBadge: !!domElements.discoveryBadge,
+        resetBtn: !!domElements.resetBtn
+    });
+    
+    // Force create the discovered chords container if it doesn't exist
+    if (!domElements.discoveredChordsContainer) {
+        console.error('[DEBUG] Discovered chords container not found, creating it');
+        const container = document.querySelector('.chord-grid');
+        if (container) {
+            domElements.discoveredChordsContainer = container;
+        } else {
+            // Try to create it
+            const discoveryLog = document.querySelector('.discovery-log');
+            if (discoveryLog) {
+                const newContainer = document.createElement('div');
+                newContainer.id = 'discovered-chords';
+                newContainer.className = 'chord-grid';
+                discoveryLog.appendChild(newContainer);
+                domElements.discoveredChordsContainer = newContainer;
+                console.log('[DEBUG] Created new discovered chords container');
+            }
+        }
+    }
     
     console.log("DOM elements selected:", domElements);
     
@@ -801,6 +1242,26 @@ function initialize() {
     } else {
         console.error("Could not find identify button!");
     }
+
+    // Add keyboard support for Space and Enter to trigger Identify
+    window.addEventListener('keydown', function(e) {
+        // Ignore if focus is on an input, select, or textarea
+        const tag = document.activeElement.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+        if (e.code === 'Space' || e.code === 'Enter') {
+            e.preventDefault();
+            if (domElements.identifyBtn) {
+                domElements.identifyBtn.click();
+            }
+        }
+    });
+
+    // Blur .note-select dropdowns after selection (so keyboard shortcut works immediately)
+    document.querySelectorAll('.note-select').forEach(function(select) {
+        select.addEventListener('change', function() {
+            this.blur();
+        });
+    });
     
     // Add event listener to the reset button
     if (domElements.resetBtn) {
@@ -885,7 +1346,22 @@ function initialize() {
     
     // Initialize the discovery progress
     const discovered = getDiscoveredChords();
+    console.log("[DEBUG] Discovered chords at init:", discovered);
+    
+    // Force update even if discovered is empty
+    if (!discovered || discovered.length === 0) {
+        console.log("[DEBUG] No discovered chords found, ensuring UI is reset");
+    }
+    
     updateDiscoveryProgress(discovered);
+    
+    // Force the progress text to update
+    if (domElements.progressText) {
+        const total = chordTypes.length;
+        const count = discovered.length;
+        domElements.progressText.textContent = `${count}/${total} Discovered`;
+        console.log(`[DEBUG] Force updated progress text: ${count}/${total} Discovered`);
+    }
     
     // Reset newly discovered chords
     newlyDiscoveredChords = [];
@@ -899,8 +1375,11 @@ function initialize() {
  * This handles the transition from the old chord order to the new one
  */
 function migrateChordData() {
+    console.log("[DEBUG] Running chord data migration");
     try {
         // Get the currently saved discovered chords (using old indices)
+        console.log("[DEBUG] localStorage available:", !!window.localStorage);
+        console.log("[DEBUG] chordTypes available:", !!window.chordTypes);
         const oldDiscovered = JSON.parse(localStorage.getItem('discoveredChords') || '[]');
         
         if (oldDiscovered.length === 0) {
@@ -929,4 +1408,19 @@ function migrateChordData() {
 }
 
 // Start the app when DOM is fully loaded
-document.addEventListener('DOMContentLoaded', initialize); 
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('[DEBUG] DOM content loaded, initializing app');
+    
+    // Initialize the app
+    initialize();
+    
+    // Force a redraw of the discovery grid after a short delay
+    setTimeout(() => {
+        console.log('[DEBUG] Forcing redraw of discovery grid after initialization');
+        // Re-initialize DOM elements to ensure they're available
+        initializeDiscoveryDOMElements();
+        // Then update the grid with discovered chords
+        const discovered = getDiscoveredChords();
+        updateDiscoveredChordsGrid(discovered);
+    }, 1000);  // Increased timeout to ensure DOM is fully ready
+}); 
