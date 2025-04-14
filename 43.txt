@@ -14,7 +14,7 @@
 14. Cluster: C, C#, D, D#
 15. dimMaj7: C, Eb, Gb, B
 16. dimMaj7sus2: C, D, Gb, B
-17. Ma7b5sus*b2: C, Db, Gb, B
+17. Maj7b5sus*b2: C, Db, Gb, B
 18. Maj7: C, E, G, B
 19. Maj7#5: C, E, G#, B
 20. Maj7#5add6-omit3: C, G#, A, B
