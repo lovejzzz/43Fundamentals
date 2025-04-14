@@ -4,27 +4,6 @@ A web-based application that allows musicians to explore and discover the 43 fun
 
 *Created by Tian Xing, who discovered the mathematical foundation of these 43 fundamental chord types and wanted to share this knowledge with the world.*
 
----
-
-## Changelog
-
-### v0.2 (2025-04-14)
-- **Animated UI & Visual Polish:**
-  - Chord cards, badges, buttons, and progress bar now feature smooth animations and transitions for a delightful user experience.
-  - "New Discovery!" badge has a shining effect and is fully non-selectable.
-- **Auto-Scroll to New Chord:**
-  - When you discover a new chord, the "Your Discovery" grid automatically scrolls to center the new chord card in view.
-- **Bug Fixes & Usability:**
-  - Fixed bounce animation for new chords (no double trigger).
-  - Fixed issue where new chords appeared visually empty in the grid.
-  - Improved DOM timing to ensure reliable updates.
-  - Improved accessibility and pointer behavior for badges.
-- **Other Improvements:**
-  - Code and CSS refactoring for maintainability.
-  - README and documentation updates.
-
----
-
 ## Features
 
 - Input any 4 music notes to identify the chord type
@@ -159,6 +138,28 @@ If you need to modify or extend this application:
    - The application will automatically use this order for displaying chords
 
 3. **Improving Chord Identification**:
+
+---
+
+## Changelog
+
+### v0.2 (2025-04-14)
+- **Animated UI & Visual Polish:**
+  - Chord cards, badges, buttons, and progress bar now feature smooth animations and transitions for a delightful user experience.
+  - "New Discovery!" badge has a shining effect and is fully non-selectable.
+- **Auto-Scroll to New Chord:**
+  - When you discover a new chord, the "Your Discovery" grid automatically scrolls to center the new chord card in view.
+- **Bug Fixes & Usability:**
+  - Fixed bounce animation for new chords (no double trigger).
+  - Fixed issue where new chords appeared visually empty in the grid.
+  - Improved DOM timing to ensure reliable updates.
+  - Improved accessibility and pointer behavior for badges.
+- **Other Improvements:**
+  - Code and CSS refactoring for maintainability.
+  - README and documentation updates.
+
+---
+
    - The core identification logic is in the `identifyChord()` function
    - The note reordering logic is in `reorderNotesToRootPosition()`
    - Both rely on the comprehensive mapping in `chord_mapping.txt`
